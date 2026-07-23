@@ -1,0 +1,7 @@
+**/node_modules
+**/dist
+**/.next
+**/.turbo
+**/auth_info
+.git
+*.md

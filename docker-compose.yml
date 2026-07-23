@@ -1,0 +1,44 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: e3
+      POSTGRES_PASSWORD: e3
+      POSTGRES_DB: e3_crm
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U e3 -d e3_crm"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "postgresql://e3:e3@postgres:5432/e3_crm?schema=public"
+      PORT: 3001
+      CORS_ORIGIN: "http://localhost:3000"
+      FIREBASE_SERVICE_ACCOUNT_JSON: ${FIREBASE_SERVICE_ACCOUNT_JSON}
+      SEED_USER_1_EMAIL: ${SEED_USER_1_EMAIL}
+      SEED_USER_2_EMAIL: ${SEED_USER_2_EMAIL}
+      WHATSAPP_AUTH_DIR: /repo/apps/api/auth_info
+      LOG_LEVEL: info
+      NODE_ENV: production
+    ports:
+      - "3001:3001"
+    volumes:
+      - whatsapp_auth:/repo/apps/api/auth_info
+
+volumes:
+  postgres_data:
+  whatsapp_auth:
