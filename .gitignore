@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+.next/
+out/
+build/
+
+# Env files
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Prisma
+apps/api/prisma/migrations/dev.db
+
+# WhatsApp session (Baileys auth state) - never commit, contains session credentials
+apps/api/auth_info/
+**/auth_info*/
+
+# Firebase
+.firebase/
+firebase-debug.log
+firestore-debug.log
+
+# Fly.io
+fly.toml.bak
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Editor/OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Turbo
+.turbo/
+
+# Misc
+*.tsbuildinfo
