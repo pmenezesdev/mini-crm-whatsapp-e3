@@ -10,6 +10,8 @@ allowBuilds:
   esbuild: true
   prisma: true
   protobufjs: true
+  sharp: true
+  unrs-resolver: true
 
 # baileys depends on libsignal, resolved via a git repository as a sub-dependency;
 # pnpm 11 blocks non-registry sub-dependencies by default as a supply-chain safeguard.
