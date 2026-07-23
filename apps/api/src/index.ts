@@ -2,6 +2,7 @@ import "dotenv/config";
 import cors from "cors";
 import express from "express";
 import { logger } from "./lib/logger.js";
+import { conversationsRouter } from "./routes/conversations.js";
 import { meRouter } from "./routes/me.js";
 
 const app = express();
@@ -16,6 +17,7 @@ app.get("/health", (_req, res) => {
 });
 
 app.use("/api", meRouter);
+app.use("/api", conversationsRouter);
 
 app.listen(port, () => {
   logger.info(`API rodando em http://localhost:${port}`);
