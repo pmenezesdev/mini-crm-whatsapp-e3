@@ -1,0 +1,68 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Unit {
+  id              String   @id @default(cuid())
+  name            String
+  isWhatsappOwner Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  users         User[]
+  conversations Conversation[]
+  messages      Message[]
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  firebaseUid String? @unique
+  unitId    String
+  createdAt DateTime @default(now())
+
+  unit Unit @relation(fields: [unitId], references: [id])
+
+  @@index([unitId])
+}
+
+model Conversation {
+  id            String   @id @default(cuid())
+  unitId        String
+  whatsappJid   String   @unique
+  contactName   String?
+  updatedAt     DateTime @updatedAt
+  createdAt     DateTime @default(now())
+
+  unit     Unit      @relation(fields: [unitId], references: [id])
+  messages Message[]
+
+  @@index([unitId])
+}
+
+enum MessageDirection {
+  IN
+  OUT
+}
+
+model Message {
+  id             String           @id @default(cuid())
+  conversationId String
+  unitId         String
+  direction      MessageDirection
+  body           String
+  waMessageId    String?          @unique
+  timestamp      DateTime
+  createdAt      DateTime         @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id])
+  unit         Unit         @relation(fields: [unitId], references: [id])
+
+  @@index([conversationId])
+  @@index([unitId])
+}
