@@ -1,6 +1,7 @@
 import path from "node:path";
 import makeWASocket, {
   DisconnectReason,
+  fetchLatestBaileysVersion,
   useMultiFileAuthState,
   type WASocket,
 } from "@whiskeysockets/baileys";
@@ -22,9 +23,11 @@ let connectionState: WhatsappConnectionState = "DISCONNECTED";
 
 export async function startWhatsapp(): Promise<void> {
   const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
+  const { version } = await fetchLatestBaileysVersion();
 
   const sock: WASocket = makeWASocket({
     auth: state,
+    version,
     logger: baileysLogger,
   });
 
