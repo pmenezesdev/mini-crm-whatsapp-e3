@@ -15,6 +15,26 @@ requisição depois de um período parado pode levar 30-50s para responder (cold
 necessário escanear o QR Code novamente ao acessar após um período de inatividade.
 Localmente, via `docker compose up`, a sessão persiste normalmente em um volume Docker.
 
+### Rebuild/redeploy do frontend
+
+`.env.local` tem prioridade sobre `.env.production` no `next build` (comportamento documentado
+do Next.js: a ordem de carregamento é `.env.local` → `.env.production` → `.env`, e uma variável já
+resolvida não é sobrescrita pelos arquivos seguintes). Como `apps/web/.env.local` fixa
+`NEXT_PUBLIC_API_URL=http://localhost:3001` para o dev local, um `next build` comum embutiria essa
+URL local no bundle de produção. Por isso, o build de deploy **precisa forçar a variável via shell**:
+
+```bash
+cd apps/web
+rm -rf .next out
+NEXT_PUBLIC_API_URL="https://mini-crm-whatsapp-e3.onrender.com" pnpm build
+firebase deploy --only hosting --project e3-crm-whatsapp
+```
+
+O `firebase.json` também define `Cache-Control: no-cache` para os HTML e `immutable` para os
+assets versionados em `_next/static/`, para que um redeploy fique visível imediatamente (sem isso,
+o Firebase Hosting cacheia o `index.html` por padrão e usuários podem ver a versão antiga por até
+1 hora).
+
 ## Arquitetura e decisões
 
 O projeto é um monorepo gerenciado com **pnpm workspaces + Turborepo**, com `apps/api` (Node.js + Express + TypeScript), `apps/web` (Next.js App Router) e `packages/shared` (tipos TypeScript compartilhados entre os dois, evitando duplicar os contratos de API). O backend usa **PostgreSQL + Prisma** como banco: o domínio tem relações estritas (usuário pertence a uma unidade, conversa e mensagem pertencem a uma unidade) que se beneficiam de chaves estrangeiras e migrations versionadas — mais adequado aqui do que um banco de documentos. O campo `unitId` é denormalizado também em `Message` (além de vir via `Conversation`) para que o isolamento por unidade possa ser garantido com um filtro direto em cada query, em vez de depender de um `join` implícito.
