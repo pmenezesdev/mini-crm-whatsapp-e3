@@ -1,3 +1,4 @@
+import { readdir, rm } from "node:fs/promises";
 import path from "node:path";
 import makeWASocket, {
   DisconnectReason,
@@ -20,6 +21,13 @@ const baileysLogger = pino({ level: "warn" });
 
 let currentQr: string | null = null;
 let connectionState: WhatsappConnectionState = "DISCONNECTED";
+
+async function clearAuthState(): Promise<void> {
+  const files = await readdir(AUTH_DIR).catch(() => []);
+  await Promise.all(
+    files.map((file) => rm(path.join(AUTH_DIR, file), { recursive: true, force: true }))
+  );
+}
 
 export async function startWhatsapp(): Promise<void> {
   const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
@@ -59,6 +67,14 @@ export async function startWhatsapp(): Promise<void> {
 
       if (shouldReconnect) {
         startWhatsapp().catch((err) => logger.error(err, "Falha ao reconectar ao WhatsApp."));
+      } else {
+        // Sessao invalidada de vez (logout, troca de aparelho, etc.) - a credencial salva nunca
+        // mais vai funcionar. Limpa o estado e recomeca do zero para gerar um QR novo, em vez de
+        // ficar parado em DISCONNECTED ate alguem reiniciar o container manualmente.
+        logger.warn("Sessao invalidada permanentemente. Gerando novo QR Code.");
+        clearAuthState()
+          .then(() => startWhatsapp())
+          .catch((err) => logger.error(err, "Falha ao reiniciar apos sessao invalidada."));
       }
     }
   });
