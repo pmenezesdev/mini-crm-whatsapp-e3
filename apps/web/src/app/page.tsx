@@ -9,6 +9,8 @@ import { ConversationMessages } from "@/components/ConversationMessages";
 import { WhatsappStatusBadge } from "@/components/WhatsappStatusBadge";
 import { apiFetch, ApiError } from "@/lib/api";
 
+const CONVERSATIONS_POLL_INTERVAL_MS = 4000;
+
 export default function DashboardPage() {
   const { user, loading, getIdToken, signOut } = useAuth();
   const router = useRouter();
@@ -52,9 +54,17 @@ export default function DashboardPage() {
     if (user) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch assincrono ao autenticar; setState so ocorre apos o await, nao ha cascata sincrona
       loadMe();
-      loadConversations();
     }
-  }, [user, loadMe, loadConversations]);
+  }, [user, loadMe]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch assincrono; mantem a lista de conversas atualizada sem precisar recarregar a pagina
+    loadConversations();
+    const interval = setInterval(loadConversations, CONVERSATIONS_POLL_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, [user, loadConversations]);
 
   if (loading || !user) return null;
 
