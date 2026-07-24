@@ -13,7 +13,7 @@ conversationsRouter.get("/conversations", requireAuth, async (req, res) => {
     orderBy: { updatedAt: "desc" },
     include: {
       messages: {
-        orderBy: { timestamp: "desc" },
+        orderBy: [{ timestamp: "desc" }, { createdAt: "desc" }],
         take: 1,
       },
     },
@@ -43,7 +43,7 @@ conversationsRouter.get("/conversations/:id/messages", requireAuth, async (req, 
 
   const messages = await prisma.message.findMany({
     where: { conversationId: id },
-    orderBy: { timestamp: "asc" },
+    orderBy: [{ timestamp: "asc" }, { createdAt: "asc" }],
   });
 
   const dto: MessageDTO[] = messages.map((m) => ({
