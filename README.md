@@ -4,8 +4,16 @@ Teste técnico de Desenvolvedor(a) Full-Stack: mini-CRM com integração WhatsAp
 
 ## Deploy
 
-- Frontend (Firebase Hosting): _a preencher após o deploy_
-- Backend (Fly.io): _a preencher após o deploy_
+- Frontend (Firebase Hosting): https://e3-crm-whatsapp.web.app
+- Backend (Render): https://mini-crm-whatsapp-e3.onrender.com
+- Repositório: https://github.com/pmenezesdev/mini-crm-whatsapp-e3
+
+**Atenção:** o backend está no plano free do Render, que não tem disco persistente e
+hiberna após ~15min de inatividade. Isso tem duas consequências: (1) a primeira
+requisição depois de um período parado pode levar 30-50s para responder (cold start);
+(2) a sessão do WhatsApp (Baileys) não sobrevive a um restart/hibernação — pode ser
+necessário escanear o QR Code novamente ao acessar após um período de inatividade.
+Localmente, via `docker compose up`, a sessão persiste normalmente em um volume Docker.
 
 ## Arquitetura e decisões
 
@@ -13,7 +21,7 @@ O projeto é um monorepo gerenciado com **pnpm workspaces + Turborepo**, com `ap
 
 A integração com o WhatsApp usa **Baileys** (`@whiskeysockets/baileys`), por ser mais leve que `whatsapp-web.js` (não depende de Chromium/Puppeteer, o que facilita rodar em container). Durante a implementação a versão resolvida por `^6.7.16` (6.17.16) acabou sendo uma release deprecated por uma vulnerabilidade de spoofing de mensagens — o `package.json` fixa a versão exata `6.7.23` (última da linha "legacy" com o patch) para evitar essa resolução. A conexão é única (um número de WhatsApp), e a unidade "dona" da conexão é marcada com a flag `isWhatsappOwner` no seed; o isolamento multi-unidade é demonstrado pelo fato de a unidade que não é dona simplesmente não ver nenhuma conversa, já que toda mensagem recebida é persistida associada ao `unitId` da unidade dona.
 
-A autenticação usa **Firebase Authentication (Google Sign-In)** no frontend; o backend verifica o `idToken` recebido via `firebase-admin` e resolve a unidade do usuário casando por **email** contra a tabela `User` (populada por um script de seed, com os emails informados via variáveis de ambiente) — isso evita precisar saber o UID do Firebase antes do primeiro login. Como o backend também precisa estar acessível para a URL pública do Firebase Hosting funcionar de ponta a ponta (o requisito original só fala em publicar o frontend), o backend é publicado separadamente no **Fly.io** (suporta um container Docker persistente com volume, necessário para a sessão do Baileys sobreviver a restarts) com o banco de produção no **Neon** (Postgres gerenciado, free tier). O `docker-compose` local usa um Postgres em container e serve para desenvolvimento/avaliação local.
+A autenticação usa **Firebase Authentication (Google Sign-In)** no frontend; o backend verifica o `idToken` recebido via `firebase-admin` e resolve a unidade do usuário casando por **email** contra a tabela `User` (populada por um script de seed, com os emails informados via variáveis de ambiente) — isso evita precisar saber o UID do Firebase antes do primeiro login. Como o backend também precisa estar acessível para a URL pública do Firebase Hosting funcionar de ponta a ponta (o requisito original só fala em publicar o frontend), o backend é publicado separadamente no **Render** (free tier, sem exigir cartão de crédito) com o banco de produção no **Neon** (Postgres gerenciado, free tier, região São Paulo). A alternativa inicialmente cogitada foi o Fly.io — suporta volume persistente para a sessão do Baileys sobreviver a restarts — mas hoje exige cartão mesmo no free tier; o Render foi escolhido para não depender disso, ao custo de não ter disco persistente e hibernar por inatividade (detalhado na seção Deploy acima). O `docker-compose` local usa um Postgres em container e não tem essa limitação. O frontend usa `next export` (site estático, sem SSR) já que nenhuma página depende de renderização no servidor, o que simplifica o deploy no Firebase Hosting para um upload de arquivos estáticos.
 
 ## Setup local
 
@@ -83,6 +91,12 @@ pnpm --filter @e3/web dev
 ```
 
 Abra `http://localhost:3000/login`, entre com a conta Google vinculada à unidade dona da conexão (`SEED_USER_1_EMAIL`) e veja a conversa. Para conferir o isolamento, abra uma janela anônima e entre com `SEED_USER_2_EMAIL` — a lista de conversas deve aparecer vazia.
+
+### 8. Testar a versão publicada
+
+Repita o passo 7 contra `https://e3-crm-whatsapp.web.app` (já configurado para falar com o backend em
+`https://mini-crm-whatsapp-e3.onrender.com`). Se o backend estiver hibernado, a primeira request
+pode demorar ~30-50s.
 
 ## O que faria diferente com mais tempo
 
