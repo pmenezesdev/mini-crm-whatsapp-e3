@@ -22,8 +22,9 @@ export async function handleMessagesUpsert(
 
   for (const msg of messages) {
     const remoteJid = msg.key.remoteJid;
+    const isGroupOrBroadcast = remoteJid?.endsWith("@g.us") || remoteJid?.endsWith("@broadcast");
 
-    if (!msg.message || msg.key.fromMe || !remoteJid || remoteJid === "status@broadcast") {
+    if (!msg.message || msg.key.fromMe || !remoteJid || isGroupOrBroadcast) {
       continue;
     }
 
