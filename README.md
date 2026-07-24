@@ -15,6 +15,20 @@ requisição depois de um período parado pode levar 30-50s para responder (cold
 necessário escanear o QR Code novamente ao acessar após um período de inatividade.
 Localmente, via `docker compose up`, a sessão persiste normalmente em um volume Docker.
 
+**Seed em produção:** o `prisma migrate deploy` roda automaticamente a cada deploy do
+backend (está no `CMD` do Dockerfile), mas o **seed não** — é um passo manual, feito uma vez
+apontando `DATABASE_URL` para o Neon:
+
+```bash
+cd apps/api
+DATABASE_URL="<connection string do Neon>" \
+SEED_USER_1_EMAIL="..." SEED_USER_2_EMAIL="..." \
+pnpm exec tsx prisma/seed.ts
+```
+
+Sem isso, o login funciona (Firebase Auth) mas a API responde 403 "não vinculado a
+nenhuma unidade", porque a tabela `User` está vazia.
+
 ### Rebuild/redeploy do frontend
 
 `.env.local` tem prioridade sobre `.env.production` no `next build` (comportamento documentado
