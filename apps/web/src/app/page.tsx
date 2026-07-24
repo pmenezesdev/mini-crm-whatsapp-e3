@@ -10,6 +10,11 @@ import { WhatsappStatusBadge } from "@/components/WhatsappStatusBadge";
 import { apiFetch, ApiError } from "@/lib/api";
 
 const CONVERSATIONS_POLL_INTERVAL_MS = 4000;
+const ME_MAX_ATTEMPTS = 6;
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 export default function DashboardPage() {
   const { user, loading, getIdToken, signOut } = useAuth();
@@ -28,15 +33,30 @@ export default function DashboardPage() {
 
   const loadMe = useCallback(async () => {
     const idToken = await getIdToken();
-    try {
-      const data = await apiFetch<MeDTO>("/api/me", idToken);
-      setMe(data);
-    } catch (err) {
-      setMeError(
-        err instanceof ApiError
-          ? err.message
-          : "Nao foi possivel carregar os dados do usuario."
-      );
+
+    for (let attempt = 1; attempt <= ME_MAX_ATTEMPTS; attempt++) {
+      try {
+        const data = await apiFetch<MeDTO>("/api/me", idToken);
+        setMe(data);
+        setMeError(null);
+        return;
+      } catch (err) {
+        // 401/403 sao permanentes (token invalido ou usuario sem unidade) - nao adianta tentar de novo.
+        const isPermanent = err instanceof ApiError && err.status < 500;
+        const isLastAttempt = attempt === ME_MAX_ATTEMPTS;
+
+        if (isPermanent || isLastAttempt) {
+          setMeError(
+            err instanceof ApiError
+              ? err.message
+              : "Nao foi possivel conectar ao servidor. O backend pode estar demorando pra iniciar (plano free do Render)."
+          );
+          return;
+        }
+
+        // Backoff crescente: cobre o cold start do Render free tier (pode levar ate ~50s).
+        await sleep(Math.min(2000 * 2 ** (attempt - 1), 20000));
+      }
     }
   }, [getIdToken]);
 
